@@ -7,5 +7,6 @@ class NoteSerializer(serializers.ModelSerializer):
         model = Note
         fields = ['id', 'title', 'content', 'published', 'owner', 'created', 'updated']
         extra_kwargs = {
+            'owner': {'read_only': True},
             'published': {'read_only': True},
         }

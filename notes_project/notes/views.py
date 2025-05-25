@@ -1,51 +1,59 @@
+from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.shortcuts import get_object_or_404
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from django.shortcuts import get_object_or_404
 from .models import Note
 from .serializers import NoteSerializer
-from .permissions import IsOwner
+from .permissions import IsOwner, IsOwnerOrReadOnlyPublished
 
 
+class UserNotes(generics.ListAPIView):
+    serializer_class = NoteSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Note.objects.filter(owner=self.request.user)
 
-class NoteList(APIView):
+
+class publishedNotes(generics.ListAPIView):
+    queryset = Note.objects.filter(published=True)
+    serializer_class = NoteSerializer
+
+
+class NoteCreate(generics.CreateAPIView):
+    serializer_class = NoteSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        notes = Note.objects.filter(created_by=request.User)
-        serializer = NoteSerializer(notes, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        serializer = NoteSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(owner=request.user)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
     
+    
+class NoteRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Note.objects.all()
+    serializer_class = NoteSerializer
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnlyPublished]
 
 
-class NoteDetail(APIView):
+class NotePublish(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated, IsOwner]
-   
-    def get(self, request, id):
-        note = get_object_or_404(Note, id=id)
-        serializer = NoteSerializer(note)
+
+    def post(self, request, pk):
+        note = get_object_or_404(Note, pk=pk)
+        
+        if note.published:
+            return Response(
+                 {"detail": "This note is already published"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        note.published = True
+        note.save()
+        serializer = NoteSerializer(instance=note)
         return Response(serializer.data)
-
-    def put(self, request,id):
-        note = get_object_or_404(Note, id=id)
-        serializer = NoteSerializer(note, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request,id):
-        note = get_object_or_404(Note, id=id)
-        note.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)

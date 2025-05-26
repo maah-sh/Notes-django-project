@@ -10,7 +10,7 @@ from .serializers import NoteSerializer
 from .permissions import IsOwner, IsOwnerOrReadOnlyPublished
 
 
-class UserNotes(generics.ListAPIView):
+class UserNotesList(generics.ListAPIView):
     serializer_class = NoteSerializer
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -19,7 +19,7 @@ class UserNotes(generics.ListAPIView):
         return Note.objects.filter(owner=self.request.user)
 
 
-class publishedNotes(generics.ListAPIView):
+class PublishedNotesList(generics.ListAPIView):
     queryset = Note.objects.filter(published=True)
     serializer_class = NoteSerializer
 
@@ -40,20 +40,4 @@ class NoteRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnlyPublished]
 
 
-class NotePublish(APIView):
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, IsOwner]
 
-    def post(self, request, pk):
-        note = get_object_or_404(Note, pk=pk)
-        
-        if note.published:
-            return Response(
-                 {"detail": "This note is already published"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        note.published = True
-        note.save()
-        serializer = NoteSerializer(instance=note)
-        return Response(serializer.data)

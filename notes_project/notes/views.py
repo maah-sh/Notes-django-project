@@ -1,5 +1,5 @@
 from rest_framework import generics
-from rest_framework.authentication import TokenAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django.shortcuts import get_object_or_404
 from .models import Note
@@ -9,7 +9,7 @@ from .permissions import IsOwnerOrReadOnlyPublished
 
 class UserNotesList(generics.ListAPIView):
     serializer_class = NoteSerializer
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
@@ -23,7 +23,7 @@ class PublishedNotesList(generics.ListAPIView):
 
 class NoteCreate(generics.CreateAPIView):
     serializer_class = NoteSerializer
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
@@ -33,7 +33,7 @@ class NoteCreate(generics.CreateAPIView):
 class NoteRetrieveUpdateDestroy(generics.RetrieveUpdateDestroyAPIView):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
-    authentication_classes = [TokenAuthentication]
+    authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrReadOnlyPublished]
 
 
